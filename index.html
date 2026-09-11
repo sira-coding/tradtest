@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Trading Dashboard</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; margin-top: 50px; background: #121212; color: #fff; }
+        .card { background: #1e1e1e; padding: 30px; border-radius: 12px; display: inline-block; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        button { padding: 12px 24px; font-size: 16px; font-weight: bold; cursor: pointer; border: none; border-radius: 8px; margin: 10px; }
+        .btn-start { background: #28a745; color: white; }
+        .btn-stop { background: #dc3545; color: white; }
+        #status { font-weight: bold; font-size: 18px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>EA Control Panel</h2>
+        <div id="status">สถานะ: กำลังโหลด...</div>
+        <button class="btn-start" onclick="sendCommand('START')">เริ่มทำงาน (Start)</button>
+        <button class="btn-stop" onclick="sendCommand('STOP')">หยุดทำงาน (Stop)</button>
+    </div>
+
+    <script>
+        const serverUrl = "http://localhost:3000"; // เปลี่ยนเป็น IP ของ Server คุณเมื่อใช้งานจริง
+
+        function updateStatus() {
+            fetch(`${serverUrl}/status`)
+                .then(res => res.json())
+                .then(data => {
+                    const statusEl = document.getElementById("status");
+                    statusEl.innerText = "สถานะ: " + (data.isRunning ? "🟢 กำลังรันอยู่" : "🔴 หยุดการทำงาน");
+                    statusEl.style.color = data.isRunning ? "#28a745" : "#dc3545";
+                });
+        }
+
+        function sendCommand(cmd) {
+            fetch(`${serverUrl}/control`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: cmd })
+            }).then(() => updateStatus());
+        }
+
+        // อัปเดตสถานะทุกๆ 2 วินาที
+        setInterval(updateStatus, 2000);
+        updateStatus();
+    </script>
+</body>
+</html>
