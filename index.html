@@ -1,24 +1,100 @@
-const express = require('express');
-const cors = require('cors');
-const app = express();
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EA Remote Control Panel</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            text-align: center; 
+            background: #121212; 
+            color: #fff; 
+            padding-top: 50px; 
+            margin: 0;
+        }
+        .card { 
+            background: #1e1e1e; 
+            padding: 30px; 
+            border-radius: 16px; 
+            display: inline-block; 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.6); 
+            max-width: 90%;
+            width: 350px;
+        }
+        h2 { margin-top: 0; color: #f0f0f0; }
+        #status { 
+            font-size: 20px; 
+            font-weight: bold; 
+            margin: 25px 0; 
+            padding: 12px;
+            border-radius: 8px;
+            background: #2a2a2a;
+        }
+        .btn-group {
+            display: flex;
+            justify-content: space-around;
+            gap: 10px;
+        }
+        button { 
+            flex: 1;
+            padding: 15px 20px; 
+            font-size: 16px; 
+            font-weight: bold; 
+            border: none; 
+            border-radius: 10px; 
+            cursor: pointer; 
+            transition: all 0.2s ease;
+        }
+        .btn-start { background: #28a745; color: white; }
+        .btn-start:active { background: #1e7e34; transform: scale(0.98); }
+        .btn-stop { background: #dc3545; color: white; }
+        .btn-stop:active { background: #bd2130; transform: scale(0.98); }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>EA Remote Control</h2>
+        <div id="status">กำลังเชื่อมต่อ...</div>
+        <div class="btn-group">
+            <button class="btn-start" onclick="sendCmd('START')">▶ START</button>
+            <button class="btn-stop" onclick="sendCmd('STOP')">⏹ STOP</button>
+        </div>
+    </div>
 
-app.use(express.json());
-app.use(cors());
+    <script>
+        // ใช้ Static Domain ของคุณเรียบร้อยแล้ว
+        const SERVER_URL = "https://equinox-swipe-jelly.ngrok-free.dev"; 
 
-let isRunning = false;
+        function checkStatus() {
+            fetch(`${SERVER_URL}/status`)
+                .then(res => res.json())
+                .then(data => {
+                    const el = document.getElementById("status");
+                    if (data.isRunning) {
+                        el.innerText = "🟢 บอทกำลังทำงาน (RUNNING)";
+                        el.style.color = "#28a745";
+                    } else {
+                        el.innerText = "🔴 บอทหยุดทำงาน (STOPPED)";
+                        el.style.color = "#dc3545";
+                    }
+                }).catch(() => {
+                    const el = document.getElementById("status");
+                    el.innerText = "⚠️ เชื่อมต่อ Server ไม่ได้";
+                    el.style.color = "#ffc107";
+                });
+        }
 
-app.post('/control', (req, res) => {
-    const { action } = req.body;
-    if (action === 'START') isRunning = true;
-    if (action === 'STOP') isRunning = false;
-    console.log(`[Command] Bot status: ${isRunning ? 'RUNNING 🟢' : 'STOPPED 🔴'}`);
-    res.json({ success: true, isRunning });
-});
+        function sendCmd(action) {
+            fetch(`${SERVER_URL}/control`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action })
+            }).then(() => checkStatus());
+        }
 
-app.get('/status', (req, res) => {
-    res.json({ isRunning });
-});
-
-app.listen(3000, () => {
-    console.log('✅ Local Server active on port 3000');
-});
+        setInterval(checkStatus, 3000);
+        checkStatus();
+    </script>
+</body>
+</html>
