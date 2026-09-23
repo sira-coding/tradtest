@@ -63,32 +63,37 @@
     </div>
 
     <script>
-        // ใช้ Static Domain ของคุณเรียบร้อยแล้ว
         const SERVER_URL = "https://equinox-swipe-jelly.ngrok-free.dev"; 
 
         function checkStatus() {
-            fetch(`${SERVER_URL}/status`)
-                .then(res => res.json())
-                .then(data => {
-                    const el = document.getElementById("status");
-                    if (data.isRunning) {
-                        el.innerText = "🟢 บอทกำลังทำงาน (RUNNING)";
-                        el.style.color = "#28a745";
-                    } else {
-                        el.innerText = "🔴 บอทหยุดทำงาน (STOPPED)";
-                        el.style.color = "#dc3545";
-                    }
-                }).catch(() => {
-                    const el = document.getElementById("status");
-                    el.innerText = "⚠️ เชื่อมต่อ Server ไม่ได้";
-                    el.style.color = "#ffc107";
-                });
+            // เพิ่ม header 'ngrok-skip-browser-warning' เพื่อข้ามหน้าเตือนสีเหลืองของ Ngrok
+            fetch(`${SERVER_URL}/status`, {
+                headers: { 'ngrok-skip-browser-warning': 'true' }
+            })
+            .then(res => res.json())
+            .then(data => {
+                const el = document.getElementById("status");
+                if (data.isRunning) {
+                    el.innerText = "🟢 บอทกำลังทำงาน (RUNNING)";
+                    el.style.color = "#28a745";
+                } else {
+                    el.innerText = "🔴 บอทหยุดทำงาน (STOPPED)";
+                    el.style.color = "#dc3545";
+                }
+            }).catch(() => {
+                const el = document.getElementById("status");
+                el.innerText = "⚠️ เชื่อมต่อ Server ไม่ได้";
+                el.style.color = "#ffc107";
+            });
         }
 
         function sendCmd(action) {
             fetch(`${SERVER_URL}/control`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'ngrok-skip-browser-warning': 'true'
+                },
                 body: JSON.stringify({ action })
             }).then(() => checkStatus());
         }
