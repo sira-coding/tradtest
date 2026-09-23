@@ -3,182 +3,146 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🐶 Doggy AI Dashboard</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <title>Doggy AI Dashboard</title>
     <style>
-        * { box-sizing: border-box; }
-        body { 
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            text-align: center; 
-            background: #0f172a; 
-            color: #f8fafc; 
-            padding: 30px 15px; 
-            margin: 0;
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        .container { 
-            background: #1e293b; 
-            padding: 30px; 
-            border-radius: 24px; 
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5); 
-            max-width: 420px;
-            width: 100%;
-            border: 1px solid #334155;
-        }
-        .header {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            margin-bottom: 20px;
-        }
-        .header h2 { margin: 0; font-size: 24px; color: #38bdf8; font-weight: 700; }
-        .status-badge { 
-            font-size: 16px; 
-            font-weight: 600; 
-            padding: 12px 20px;
-            border-radius: 50px;
-            background: #0f172a;
-            border: 1px solid #334155;
-            margin-bottom: 25px;
-            display: inline-block;
-            width: 100%;
-        }
-        .metrics-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 25px;
-        }
-        .metric-card {
-            background: #0f172a;
-            padding: 16px;
-            border-radius: 16px;
-            border: 1px solid #334155;
-            text-align: left;
-        }
-        .metric-title { font-size: 12px; color: #94a3b8; margin-bottom: 6px; text-transform: uppercase; font-weight: 600; }
-        .metric-value { font-size: 20px; font-weight: 700; color: #f8fafc; }
-        .profit-positive { color: #4ade80 !important; }
-        .profit-negative { color: #f87171 !important; }
-        
-        .btn-group {
-            display: flex;
-            gap: 12px;
-        }
-        button { 
-            flex: 1;
-            padding: 16px; 
-            font-size: 16px; 
-            font-weight: 700; 
-            border: none; 
-            border-radius: 14px; 
-            cursor: pointer; 
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-        .btn-start { background: #22c55e; color: white; box-shadow: 0 4px 14px rgba(34, 197, 94, 0.4); }
-        .btn-start:hover { background: #16a34a; }
-        .btn-stop { background: #ef4444; color: white; box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4); }
-        .btn-stop:hover { background: #dc2626; }
-        .footer { margin-top: 20px; font-size: 12px; color: #64748b; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #0d1117; color: #ffffff; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+        .card { background: #161b22; border: 1px solid #30363d; border-radius: 16px; padding: 24px; width: 100%; max-width: 420px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); text-align: center; }
+        .header { display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 22px; font-weight: bold; color: #58a6ff; margin-bottom: 20px; }
+        .status-badge { padding: 12px; border-radius: 30px; font-weight: bold; margin-bottom: 20px; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .status-running { background: rgba(46, 160, 67, 0.15); border: 1px solid #2ea043; color: #3fb950; }
+        .status-stopped { background: rgba(248, 81, 73, 0.15); border: 1px solid #f85149; color: #f85149; }
+        .metric-box { background: #21262d; border-radius: 12px; padding: 16px; margin-bottom: 12px; text-align: left; }
+        .metric-title { font-size: 12px; color: #8b949e; text-transform: uppercase; margin-bottom: 6px; }
+        .metric-value { font-size: 24px; font-weight: bold; }
+        .profit-positive { color: #3fb950; }
+        .profit-negative { color: #f85149; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; }
+        button { border: none; border-radius: 10px; padding: 14px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; color: #fff; }
+        .btn-start { background: #238636; }
+        .btn-start:hover { background: #2ea043; }
+        .btn-stop { background: #da3633; }
+        .btn-stop:hover { background: #f85149; }
+        .footer { font-size: 11px; color: #8b949e; margin-top: 16px; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <i class="fa-solid fa-dog" style="font-size: 28px; color: #38bdf8;"></i>
-            <h2>Doggy AI Control</h2>
+
+<div class="card">
+    <div class="header">
+        <span>🐶 Doggy AI Control</span>
+    </div>
+
+    <div id="statusBadge" class="status-badge status-running">
+        <span id="statusDot">🟢</span> <span id="statusText">บอทกำลังทำงาน (RUNNING)</span>
+    </div>
+
+    <div class="metric-box">
+        <div class="metric-title">📊 กำไร/ขาดทุนสะสม (PROFIT)</div>
+        <div id="totalProfit" class="metric-value profit-positive">+$0.00</div>
+    </div>
+
+    <div class="grid-2">
+        <div class="metric-box">
+            <div class="metric-title">📚 MARTINGALE STEP</div>
+            <div id="martStep" class="metric-value">0 / 5</div>
         </div>
-
-        <div id="status" class="status-badge">กำลังเชื่อมต่อ...</div>
-
-        <div class="metrics-grid">
-            <div class="metric-card" style="grid-column: span 2;">
-                <div class="metric-title"><i class="fa-solid fa-wallet"></i> กำไร/ขาดทุนสะสม (Profit)</div>
-                <div id="profit" class="metric-value">$0.00</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-title"><i class="fa-solid fa-layer-group"></i> Martingale Step</div>
-                <div id="step" class="metric-value">0 / 5</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-title"><i class="fa-solid fa-chart-line"></i> Lot ถัดไป</div>
-                <div id="nextLot" class="metric-value">0.01</div>
-            </div>
-        </div>
-
-        <div class="btn-group">
-            <button class="btn-start" onclick="sendCmd('START')"><i class="fa-solid fa-play"></i> START</button>
-            <button class="btn-stop" onclick="sendCmd('STOP')"><i class="fa-solid fa-stop"></i> STOP</button>
-        </div>
-
-        <div class="footer">
-            อัปเดตล่าสุด: <span id="lastUpdated">-</span> | Error: <span id="errorStatus" style="color:#4ade80;">None</span>
+        <div class="metric-box">
+            <div class="metric-title">📈 LOT ถัดไป</div>
+            <div id="nextLot" class="metric-value">0.01</div>
         </div>
     </div>
 
-    <script>
-        const SERVER_URL = "https://equinox-swipe-jelly.ngrok-free.dev"; 
+    <div class="btn-group">
+        <button class="btn-start" onclick="sendCommand('start')">▶ START</button>
+        <button class="btn-stop" onclick="sendCommand('stop')">■ STOP</button>
+    </div>
 
-        function checkStatus() {
-            fetch(`${SERVER_URL}/status`, {
-                headers: { 'ngrok-skip-browser-warning': 'true' }
-            })
-            .then(res => res.json())
-            .then(data => {
-                const statusEl = document.getElementById("status");
-                if (data.isRunning) {
-                    statusEl.innerHTML = "🟢 บอทกำลังทำงาน (RUNNING)";
-                    statusEl.style.color = "#4ade80";
-                    statusEl.style.borderColor = "#22c55e";
-                } else {
-                    statusEl.innerHTML = "🔴 บอทหยุดทำงาน (STOPPED)";
-                    statusEl.style.color = "#f87171";
-                    statusEl.style.borderColor = "#ef4444";
-                }
+    <div class="footer">
+        อัปเดตล่าสุด: <span id="lastUpdate">N/A</span> | Error: <span id="lastErr">None</span>
+    </div>
+</div>
 
-                // อัปเดตข้อมูลการเทรด
-                const profitEl = document.getElementById("profit");
-                const profitVal = parseFloat(data.profit || 0).toFixed(2);
-                profitEl.innerText = (profitVal >= 0 ? "+$" : "-$") + Math.abs(profitVal);
-                profitEl.className = "metric-value " + (profitVal >= 0 ? "profit-positive" : "profit-negative");
+<script>
+    // URL ของ ngrok ของคุณ
+    const SERVER_URL = "https://equinox-swipe-jelly.ngrok-free.dev";
 
-                document.getElementById("step").innerText = `${data.martingaleStep || 0} / ${data.maxStep || 5}`;
-                document.getElementById("nextLot").innerText = data.nextLot || "0.01";
-                document.getElementById("lastUpdated").innerText = data.lastUpdated || "N/A";
-                
-                const errEl = document.getElementById("errorStatus");
-                errEl.innerText = data.lastError || "None";
-                errEl.style.color = (data.lastError && data.lastError !== "None") ? "#f87171" : "#4ade80";
-
-            }).catch(() => {
-                const statusEl = document.getElementById("status");
-                statusEl.innerHTML = "⚠️ เชื่อมต่อ Server ไม่ได้";
-                statusEl.style.color = "#fbbf24";
-                statusEl.style.borderColor = "#f59e0b";
-            });
-        }
-
-        function sendCmd(action) {
-            fetch(`${SERVER_URL}/control`, {
+    async function sendCommand(cmd) {
+        try {
+            const res = await fetch(`${SERVER_URL}/${cmd}`, {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
                     'ngrok-skip-browser-warning': 'true'
-                },
-                body: JSON.stringify({ action })
-            }).then(() => checkStatus());
+                }
+            });
+            const data = await res.json();
+            updateUI(data);
+            fetchMetrics();
+        } catch (err) {
+            console.error("Command Error:", err);
+            alert("ไม่สามารถส่งคำสั่งไปที่ Server ได้ กรุณาเช็คการรัน ngrok และ node server.js");
+        }
+    }
+
+    async function fetchMetrics() {
+        try {
+            const res = await fetch(`${SERVER_URL}/metrics`, {
+                headers: { 'ngrok-skip-browser-warning': 'true' }
+            });
+            const data = await res.json();
+            updateUI(data);
+        } catch (err) {
+            console.error("Fetch Error:", err);
+            document.getElementById('lastErr').innerText = "Connection Failed";
+        }
+    }
+
+    function updateUI(data) {
+        // อัปเดตสถานะปุ่ม/ป้าย
+        const badge = document.getElementById('statusBadge');
+        const dot = document.getElementById('statusDot');
+        const text = document.getElementById('statusText');
+
+        if (data.isRunning) {
+            badge.className = "status-badge status-running";
+            dot.innerText = "🟢";
+            text.innerText = "บอทกำลังทำงาน (RUNNING)";
+        } else {
+            badge.className = "status-badge status-stopped";
+            dot.innerText = "🔴";
+            text.innerText = "ปิดการทำงาน (STOPPED)";
         }
 
-        setInterval(checkStatus, 2000);
-        checkStatus();
-    </script>
+        // อัปเดตตัวเลข
+        if (data.profit !== undefined) {
+            const profitEl = document.getElementById('totalProfit');
+            const p = parseFloat(data.profit);
+            profitEl.innerText = (p >= 0 ? "+" : "") + "$" + p.toFixed(2);
+            profitEl.className = "metric-value " + (p >= 0 ? "profit-positive" : "profit-negative");
+        }
+
+        if (data.step !== undefined && data.maxStep !== undefined) {
+            document.getElementById('martStep').innerText = `${data.step} / ${data.maxStep}`;
+        }
+
+        if (data.nextLot !== undefined) {
+            document.getElementById('nextLot').innerText = parseFloat(data.nextLot).toFixed(2);
+        }
+
+        if (data.lastError) {
+            document.getElementById('lastErr').innerText = data.lastError;
+        }
+
+        const now = new Date();
+        document.getElementById('lastUpdate').innerText = now.toTimeString().split(' ')[0];
+    }
+
+    // ดึงข้อมูลทุกๆ 2 วินาที
+    setInterval(fetchMetrics, 2000);
+    fetchMetrics();
+</script>
+
 </body>
 </html>
