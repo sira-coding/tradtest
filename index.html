@@ -3,62 +3,124 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EA Remote Control Panel</title>
+    <title>🐶 Doggy AI Dashboard</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
+        * { box-sizing: border-box; }
         body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             text-align: center; 
-            background: #121212; 
-            color: #fff; 
-            padding-top: 50px; 
+            background: #0f172a; 
+            color: #f8fafc; 
+            padding: 30px 15px; 
             margin: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
-        .card { 
-            background: #1e1e1e; 
+        .container { 
+            background: #1e293b; 
             padding: 30px; 
-            border-radius: 16px; 
-            display: inline-block; 
-            box-shadow: 0 8px 20px rgba(0,0,0,0.6); 
-            max-width: 90%;
-            width: 350px;
+            border-radius: 24px; 
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5); 
+            max-width: 420px;
+            width: 100%;
+            border: 1px solid #334155;
         }
-        h2 { margin-top: 0; color: #f0f0f0; }
-        #status { 
-            font-size: 20px; 
-            font-weight: bold; 
-            margin: 25px 0; 
-            padding: 12px;
-            border-radius: 8px;
-            background: #2a2a2a;
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 20px;
         }
+        .header h2 { margin: 0; font-size: 24px; color: #38bdf8; font-weight: 700; }
+        .status-badge { 
+            font-size: 16px; 
+            font-weight: 600; 
+            padding: 12px 20px;
+            border-radius: 50px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            margin-bottom: 25px;
+            display: inline-block;
+            width: 100%;
+        }
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .metric-card {
+            background: #0f172a;
+            padding: 16px;
+            border-radius: 16px;
+            border: 1px solid #334155;
+            text-align: left;
+        }
+        .metric-title { font-size: 12px; color: #94a3b8; margin-bottom: 6px; text-transform: uppercase; font-weight: 600; }
+        .metric-value { font-size: 20px; font-weight: 700; color: #f8fafc; }
+        .profit-positive { color: #4ade80 !important; }
+        .profit-negative { color: #f87171 !important; }
+        
         .btn-group {
             display: flex;
-            justify-content: space-around;
-            gap: 10px;
+            gap: 12px;
         }
         button { 
             flex: 1;
-            padding: 15px 20px; 
+            padding: 16px; 
             font-size: 16px; 
-            font-weight: bold; 
+            font-weight: 700; 
             border: none; 
-            border-radius: 10px; 
+            border-radius: 14px; 
             cursor: pointer; 
             transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
-        .btn-start { background: #28a745; color: white; }
-        .btn-start:active { background: #1e7e34; transform: scale(0.98); }
-        .btn-stop { background: #dc3545; color: white; }
-        .btn-stop:active { background: #bd2130; transform: scale(0.98); }
+        .btn-start { background: #22c55e; color: white; box-shadow: 0 4px 14px rgba(34, 197, 94, 0.4); }
+        .btn-start:hover { background: #16a34a; }
+        .btn-stop { background: #ef4444; color: white; box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4); }
+        .btn-stop:hover { background: #dc2626; }
+        .footer { margin-top: 20px; font-size: 12px; color: #64748b; }
     </style>
 </head>
 <body>
-    <div class="card">
-        <h2>EA Remote Control</h2>
-        <div id="status">กำลังเชื่อมต่อ...</div>
+    <div class="container">
+        <div class="header">
+            <i class="fa-solid fa-dog" style="font-size: 28px; color: #38bdf8;"></i>
+            <h2>Doggy AI Control</h2>
+        </div>
+
+        <div id="status" class="status-badge">กำลังเชื่อมต่อ...</div>
+
+        <div class="metrics-grid">
+            <div class="metric-card" style="grid-column: span 2;">
+                <div class="metric-title"><i class="fa-solid fa-wallet"></i> กำไร/ขาดทุนสะสม (Profit)</div>
+                <div id="profit" class="metric-value">$0.00</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title"><i class="fa-solid fa-layer-group"></i> Martingale Step</div>
+                <div id="step" class="metric-value">0 / 5</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title"><i class="fa-solid fa-chart-line"></i> Lot ถัดไป</div>
+                <div id="nextLot" class="metric-value">0.01</div>
+            </div>
+        </div>
+
         <div class="btn-group">
-            <button class="btn-start" onclick="sendCmd('START')">▶ START</button>
-            <button class="btn-stop" onclick="sendCmd('STOP')">⏹ STOP</button>
+            <button class="btn-start" onclick="sendCmd('START')"><i class="fa-solid fa-play"></i> START</button>
+            <button class="btn-stop" onclick="sendCmd('STOP')"><i class="fa-solid fa-stop"></i> STOP</button>
+        </div>
+
+        <div class="footer">
+            อัปเดตล่าสุด: <span id="lastUpdated">-</span> | Error: <span id="errorStatus" style="color:#4ade80;">None</span>
         </div>
     </div>
 
@@ -66,24 +128,41 @@
         const SERVER_URL = "https://equinox-swipe-jelly.ngrok-free.dev"; 
 
         function checkStatus() {
-            // เพิ่ม header 'ngrok-skip-browser-warning' เพื่อข้ามหน้าเตือนสีเหลืองของ Ngrok
             fetch(`${SERVER_URL}/status`, {
                 headers: { 'ngrok-skip-browser-warning': 'true' }
             })
             .then(res => res.json())
             .then(data => {
-                const el = document.getElementById("status");
+                const statusEl = document.getElementById("status");
                 if (data.isRunning) {
-                    el.innerText = "🟢 บอทกำลังทำงาน (RUNNING)";
-                    el.style.color = "#28a745";
+                    statusEl.innerHTML = "🟢 บอทกำลังทำงาน (RUNNING)";
+                    statusEl.style.color = "#4ade80";
+                    statusEl.style.borderColor = "#22c55e";
                 } else {
-                    el.innerText = "🔴 บอทหยุดทำงาน (STOPPED)";
-                    el.style.color = "#dc3545";
+                    statusEl.innerHTML = "🔴 บอทหยุดทำงาน (STOPPED)";
+                    statusEl.style.color = "#f87171";
+                    statusEl.style.borderColor = "#ef4444";
                 }
+
+                // อัปเดตข้อมูลการเทรด
+                const profitEl = document.getElementById("profit");
+                const profitVal = parseFloat(data.profit || 0).toFixed(2);
+                profitEl.innerText = (profitVal >= 0 ? "+$" : "-$") + Math.abs(profitVal);
+                profitEl.className = "metric-value " + (profitVal >= 0 ? "profit-positive" : "profit-negative");
+
+                document.getElementById("step").innerText = `${data.martingaleStep || 0} / ${data.maxStep || 5}`;
+                document.getElementById("nextLot").innerText = data.nextLot || "0.01";
+                document.getElementById("lastUpdated").innerText = data.lastUpdated || "N/A";
+                
+                const errEl = document.getElementById("errorStatus");
+                errEl.innerText = data.lastError || "None";
+                errEl.style.color = (data.lastError && data.lastError !== "None") ? "#f87171" : "#4ade80";
+
             }).catch(() => {
-                const el = document.getElementById("status");
-                el.innerText = "⚠️ เชื่อมต่อ Server ไม่ได้";
-                el.style.color = "#ffc107";
+                const statusEl = document.getElementById("status");
+                statusEl.innerHTML = "⚠️ เชื่อมต่อ Server ไม่ได้";
+                statusEl.style.color = "#fbbf24";
+                statusEl.style.borderColor = "#f59e0b";
             });
         }
 
@@ -98,7 +177,7 @@
             }).then(() => checkStatus());
         }
 
-        setInterval(checkStatus, 3000);
+        setInterval(checkStatus, 2000);
         checkStatus();
     </script>
 </body>
