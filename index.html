@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EA Controller Panel</title>
+    <title>EA Remote Control Panel</title>
     <style>
         body { font-family: sans-serif; text-align: center; background: #121212; color: #fff; padding-top: 50px; }
         .card { background: #1e1e1e; padding: 30px; border-radius: 12px; display: inline-block; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
@@ -22,8 +22,8 @@
     </div>
 
     <script>
-        // ⚠️ นำลิงก์ Ngrok ของคุณมาวางตรงนี้ทุกครั้งที่เปิด Ngrok ใหม่
-        const SERVER_URL = "https://YOUR_NGROK_URL.ngrok-free.app"; 
+        // ใช้ Static Domain ถาวรของคุณเรียบร้อยแล้ว
+        const SERVER_URL = "https://equinox-swipe-jelly.ngrok-free.dev"; 
 
         function checkStatus() {
             fetch(`${SERVER_URL}/status`)
