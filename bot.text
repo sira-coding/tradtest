@@ -1,0 +1,241 @@
+//+------------------------------------------------------------------+
+//|                                   Doggy_EA_v11_1_StockPure.mq5   |
+//|   Doggy v.11.1: Apex Stock Pure Edition - No Web, Pure Trading   |
+//|   *** DESIGNED FOR STOCKS & INDICES WITH ATR BREAKOUT & TRAIL ***|
+//+------------------------------------------------------------------+
+#property copyright "Copyright 2026, Quantitative AI Trading"
+#property link      "https://www.mql5.com"
+#property version   "11.10"
+#property description "Doggy v11.1 Stock Pure - Pure Trading EA, No Web Request, ATR Breakout & Trailing"
+
+#include <Trade/Trade.mqh>
+CTrade trade;
+
+enum ENUM_LOT_MODE { LOT_FIXED = 0, LOT_RISK_PERCENT = 1 };
+
+//+------------------------------------------------------------------+
+//| INPUTS                                                           |
+//+------------------------------------------------------------------+
+input group "=== General & Apex Settings ==="
+input long     InpMagic            = 1100111;   
+input string   InpComment          = "Doggy_v11_StockPure";
+input int      InpSlippage         = 40;        
+
+input group "=== Money Management ==="
+input ENUM_LOT_MODE InpLotMode     = LOT_FIXED; 
+input double   InpFixedLot         = 0.01;      // ล็อตเริ่มต้น 0.01
+input bool     InpUseMartingale    = false;     // ปิดทบไม้ ปลอดภัย 100%
+
+input group "=== Volatility Breakout & Exit (ATR) ==="
+input int      InpATRPeriod        = 14;
+input double   InpBreakoutFactor   = 1.2;       // ตัวคูณความผันผวน breakout
+input double   InpSL_ATR_Mult      = 2.0;       // ATR Stop Loss
+input double   InpTP_ATR_Mult      = 3.0;       // ATR Take Profit
+input int      InpCooldownBars     = 2;         // เว้นระยะห่างแท่งเทียน
+
+input group "=== Dynamic Trailing Stop ==="
+input bool     InpUseTrailing      = true;      
+input double   InpTrailStartMult   = 1.5;       // เริ่มลาก Trail เมื่อกำไรถึง 1.5x ATR
+input double   InpTrailStepMult    = 0.5;       // ขยับตามทีละ 0.5x ATR
+
+input group "=== Filters ==="
+input int      InpMaxSpreadPts     = 100;       // รองรับสเปรดสำหรับหุ้นและสินทรัพย์ต่างๆ
+
+//+------------------------------------------------------------------+
+//| GLOBALS                                                          |
+//+------------------------------------------------------------------+
+int      h_atr = INVALID_HANDLE, h_ema = INVALID_HANDLE;
+
+datetime g_lastBar        = 0;
+datetime g_lastTradeTime  = 0;
+string   g_strategy       = "WAITING";
+string   g_blockReason    = "";
+
+bool     g_dirty        = true;
+int      g_wins         = 0;
+int      g_losses       = 0;
+int      g_lossStreak   = 0;
+double   g_totalPL      = 0;
+
+//+------------------------------------------------------------------+
+//| UTILITIES                                                        |
+//+------------------------------------------------------------------+
+bool GetBuf(int handle, int buf, int shift, int count, double &arr[]) {
+   ArraySetAsSeries(arr, true);
+   return (CopyBuffer(handle, buf, shift, count, arr) == count);
+}
+
+bool SelectDoggyPosition(ulong &ticket) {
+   for(int i = PositionsTotal() - 1; i >= 0; i--) {
+      ulong t = PositionGetTicket(i);
+      if(t == 0) continue;
+      if(PositionGetInteger(POSITION_MAGIC) != InpMagic) continue;
+      if(PositionGetString(POSITION_SYMBOL) != _Symbol) continue;
+      ticket = t; return true;
+   }
+   return false;
+}
+
+void RecalcHistory() {
+   g_dirty = false;
+   if(!HistorySelect(0, TimeCurrent())) { g_dirty = true; return; }
+   g_wins = 0; g_losses = 0; g_lossStreak = 0; g_totalPL = 0;
+   int total = HistoryDealsTotal();
+   for(int i = 0; i < total; i++) {
+      ulong t = HistoryDealGetTicket(i);
+      if(HistoryDealGetInteger(t, DEAL_MAGIC) != InpMagic) continue;
+      long type = HistoryDealGetInteger(t, DEAL_TYPE);
+      if(type != DEAL_TYPE_BUY && type != DEAL_TYPE_SELL) continue;
+      if(HistoryDealGetInteger(t, DEAL_ENTRY) != DEAL_ENTRY_OUT) continue;
+      
+      double p = HistoryDealGetDouble(t, DEAL_PROFIT) + HistoryDealGetDouble(t, DEAL_SWAP) + HistoryDealGetDouble(t, DEAL_COMMISSION);
+      g_totalPL += p;
+      if(p < 0) { g_losses++; g_lossStreak++; }
+      else      { g_wins++;   g_lossStreak = 0; }
+   }
+}
+
+void OnTradeTransaction(const MqlTradeTransaction &trans, const MqlTradeRequest &request, const MqlTradeResult &result) {
+   if(trans.type == TRADE_TRANSACTION_DEAL_ADD) g_dirty = true;
+}
+
+//+------------------------------------------------------------------+
+//| POSITION MANAGEMENT & TRAILING STOP                              |
+//+------------------------------------------------------------------+
+void ManagePosition() {
+   ulong ticket;
+   if(!SelectDoggyPosition(ticket)) return;
+
+   long     type     = PositionGetInteger(POSITION_TYPE);
+   double   open     = PositionGetDouble(POSITION_PRICE_OPEN);
+   double   sl       = PositionGetDouble(POSITION_SL);
+   double   tp       = PositionGetDouble(POSITION_TP);
+   bool     isBuy    = (type == POSITION_TYPE_BUY);
+
+   double px         = isBuy ? SymbolInfoDouble(_Symbol, SYMBOL_BID) : SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+   double profitPts  = isBuy ? (px - open)/_Point : (open - px)/_Point;
+
+   double atr[];
+   if(GetBuf(h_atr, 0, 0, 1, atr)) {
+      double currentATR = atr[0];
+      double startDist  = currentATR * InpTrailStartMult / _Point;
+      double stepDist   = currentATR * InpTrailStepMult / _Point;
+
+      if(InpUseTrailing && profitPts >= startDist) {
+         double newSL = isBuy ? px - stepDist * _Point : px + stepDist * _Point;
+         newSL = NormalizeDouble(newSL, _Digits);
+         bool better = isBuy ? (newSL > sl && newSL < px) : (sl == 0 || (newSL < sl && newSL > px));
+         if(better) {
+            trade.PositionModify(ticket, newSL, tp);
+         }
+      }
+   }
+}
+
+//+------------------------------------------------------------------+
+//| SIGNAL BUILDER                                                   |
+//+------------------------------------------------------------------+
+bool BuildSignal(int &dir, double &slDist, double &tpDist) {
+   dir = 0; slDist = 0; tpDist = 0;
+
+   if(g_lastTradeTime > 0 && (TimeCurrent() - g_lastTradeTime) < InpCooldownBars * PeriodSeconds(_Period)) {
+      g_blockReason = "Cooldown Active";
+      return false;
+   }
+
+   double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+   double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+   if((ask - bid)/_Point > InpMaxSpreadPts) { g_blockReason = "Spread too high"; return false; }
+
+   MqlRates r[]; ArraySetAsSeries(r, true);
+   if(CopyRates(_Symbol, _Period, 0, 10, r) < 10) return false;
+
+   double atr[], ema[];
+   if(!GetBuf(h_atr, 0, 1, 1, atr) || !GetBuf(h_ema, 0, 1, 1, ema)) return false;
+
+   double currentATR = atr[0];
+   if(currentATR <= 0) currentATR = 50 * _Point;
+
+   double upperBand = r[1].open + (currentATR * InpBreakoutFactor);
+   double lowerBand = r[1].open - (currentATR * InpBreakoutFactor);
+
+   bool breakoutBuy  = (r[0].close > upperBand && r[0].close > ema[0]);
+   bool breakoutSell = (r[0].close < lowerBand && r[0].close < ema[0]);
+
+   if(breakoutBuy) {
+      dir = 1;
+      slDist = currentATR * InpSL_ATR_Mult;
+      tpDist = currentATR * InpTP_ATR_Mult;
+      g_strategy = "STOCK BUY BREAKOUT";
+   } 
+   else if(breakoutSell) {
+      dir = -1;
+      slDist = currentATR * InpSL_ATR_Mult;
+      tpDist = currentATR * InpTP_ATR_Mult;
+      g_strategy = "STOCK SELL BREAKOUT";
+   }
+   
+   if(dir == 0) g_blockReason = "Scanning Market...";
+   return (dir != 0);
+}
+
+void OnNewBar() {
+   if(g_dirty) RecalcHistory();
+   g_blockReason = "";
+
+   ulong t;
+   if(SelectDoggyPosition(t))             { g_blockReason = "In position"; return; }
+
+   int dir = 0; double slDist = 0, tpDist = 0;
+   if(!BuildSignal(dir, slDist, tpDist)) return;
+
+   double lot = InpFixedLot; 
+   double price = (dir == 1) ? SymbolInfoDouble(_Symbol, SYMBOL_ASK) : SymbolInfoDouble(_Symbol, SYMBOL_BID);
+   double sl    = NormalizeDouble((dir == 1) ? price - slDist : price + slDist, _Digits);
+   double tp    = NormalizeDouble((dir == 1) ? price + tpDist : price - tpDist, _Digits);
+
+   string cmt = InpComment;
+   bool ok = (dir == 1) ? trade.Buy(lot, _Symbol, 0, sl, tp, cmt) : trade.Sell(lot, _Symbol, 0, sl, tp, cmt);
+   if(ok) {
+      g_lastTradeTime = TimeCurrent();
+      Print("🐶 Doggy v11.1 Stock Pure Executed: ", (dir==1?"BUY":"SELL"), " | Strategy: ", g_strategy);
+   }
+}
+
+//+------------------------------------------------------------------+
+//| INIT / DEINIT / TICK                                             |
+//+------------------------------------------------------------------+
+int OnInit() {
+   trade.SetExpertMagicNumber((ulong)InpMagic);
+   trade.SetDeviationInPoints(InpSlippage);
+
+   h_atr  = iATR(_Symbol, _Period, InpATRPeriod);
+   h_ema  = iMA(_Symbol, _Period, 200, 0, MODE_EMA, PRICE_CLOSE);
+   
+   RecalcHistory();
+   Print("🐶 Doggy v11.1 Stock Pure Ready (No Web, Clean Trading Engine)!");
+   return INIT_SUCCEEDED;
+}
+
+void OnDeinit(const int reason) {
+   IndicatorRelease(h_atr); IndicatorRelease(h_ema);
+   Comment("");
+}
+
+void OnTick() {
+   ManagePosition();                    
+   
+   Comment("🐶 DOGGY v11.1 [STOCK PURE EDITION]\n", 
+           "----------------------------------------\n",
+           "Status: 🟢 ACTIVE (PURE TRADING)\n",
+           "Blocked by: ", (g_blockReason == "" ? "-" : g_blockReason), "\n",
+           "----------------------------------------\n",
+           "Engine: ATR Breakout + Trailing Stop\n",
+           "Total P/L: ", DoubleToString(g_totalPL, 2));
+
+   datetime bt = iTime(_Symbol, _Period, 0);
+   if(bt == g_lastBar) return;           
+   g_lastBar = bt;
+   OnNewBar();
+}
+//+------------------------------------------------------------------+
